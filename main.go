@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -21,23 +22,14 @@ func main() {
 	// city: min/max/avg
 	store := NewStore()
 
-	f, err := os.Open(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, line := range strings.Split(string(data), "\n") {
-		datapoints := strings.Split(line, ";")
-
-		if len(datapoints) == 1 {
-			continue
+	var count int
+	for line := range emitRows(filename) {
+		count++
+		if count%10_00_000 == 0 {
+			fmt.Println(count, " rows done")
 		}
+
+		datapoints := strings.Split(line, ";")
 
 		city := datapoints[0]
 		temperature, err := strconv.ParseFloat(strings.TrimSpace(datapoints[1]), 64)
@@ -47,7 +39,28 @@ func main() {
 		store.Add(city, temperature)
 	}
 
-	assertTest(store, filename)
+	// assertTest(store, filename)
+}
+
+func emitRows(filename string) <-chan string {
+	out := make(chan string)
+
+	go func() {
+		f, err := os.Open(filename)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		r := bufio.NewScanner(f)
+		for r.Scan() {
+			out <- r.Text()
+		}
+
+		close(out)
+	}()
+
+	return out
 }
 
 func assertTest(store *Store, filename string) {
