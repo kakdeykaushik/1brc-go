@@ -43,7 +43,7 @@ func main() {
 }
 
 func emitRows(filename string) <-chan string {
-	out := make(chan string)
+	out := make(chan string, 1_000)
 
 	go func() {
 		f, err := os.Open(filename)
